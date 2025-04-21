@@ -1,0 +1,17 @@
+name: nft-manager
+services:
+- name: web
+  github:
+    branch: deploy-fix
+    deploy_on_push: true
+    repo: Ch3fC0d3/NFTManager
+  build_command: npm install && npm install tailwindcss && npm run build
+  run_command: node server.cjs
+  environment_slug: node-js
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: NPM_CONFIG_PRODUCTION
+    value: "false"
+  routes:
+  - path: /

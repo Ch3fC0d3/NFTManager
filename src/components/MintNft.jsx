@@ -3,8 +3,10 @@ import { PlusCircle, Sparkles, Check, AlertTriangle, RefreshCw } from 'lucide-re
 import { Button, Card, Row, Col, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import useWallet from '../hooks/useWallet';
-import useContract from '../hooks/useContract';
-import { mintNFT, getNetworkConfig } from '../utils/contract';
+// Import the direct contract hook
+import useDirectContract from '../hooks/useDirectContract';
+// Import directly from our sepoliaContract.js file
+import { mintNFT, switchToSepoliaNetwork, isSepoliaNetwork, SEPOLIA_CHAIN_ID } from '../utils/sepoliaContract';
 
 // Sample NFT metadata options
 const SAMPLE_NFTS = [
@@ -27,7 +29,8 @@ const SAMPLE_NFTS = [
 
 function MintNft() {
   const { isConnected, signer, address, chainId, changeNetwork } = useWallet();
-  const { contract, mintPrice, currentSupply, maxSupply, refreshContractData, error: contractError } = useContract(signer, null);
+  // Use the direct contract hook instead
+  const { contract, mintPrice, currentSupply, maxSupply, refreshContractData, error: contractError } = useDirectContract(signer, null);
   
   // Force component to check wallet status
   const [walletConnected, setWalletConnected] = useState(isConnected);
@@ -35,14 +38,16 @@ function MintNft() {
   const [correctNetwork, setCorrectNetwork] = useState(true);
   const [loading, setLoading] = useState(false);
   
-  // Helper function to switch networks
-  const switchToLocalhostNetwork = async () => {
+  // Helper function to switch networks using our sepoliaContract.js file
+  const handleSwitchToSepolia = async () => {
     try {
       setLoading(true);
-      // This is localhost chainId
-      await changeNetwork(31337);
+      await switchToSepoliaNetwork();
       setNetworkError(null);
-      window.location.reload();
+      // Wait a moment for the network to update
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       setNetworkError("Failed to switch network. Please try manually.");
       console.error("Network switch error:", error);
@@ -50,6 +55,28 @@ function MintNft() {
       setLoading(false);
     }
   };
+  
+  // Auto-check for Sepolia network on initial load
+  useEffect(() => {
+    const checkForSepoliaNetwork = async () => {
+      if (typeof window.ethereum !== 'undefined' && isConnected) {
+        try {
+          const isSepolia = await isSepoliaNetwork();
+          if (!isSepolia) {
+            console.log("Not on Sepolia network, suggesting switch");
+            setNetworkError("Please switch to the Sepolia network to use this application");
+          } else {
+            console.log("Detected Sepolia network, we're good to go!");
+            setNetworkError(null);
+          }
+        } catch (error) {
+          console.error("Error checking network:", error);
+        }
+      }
+    };
+    
+    checkForSepoliaNetwork();
+  }, [isConnected]);
   
   // Check if MetaMask is connected on component mount and when isConnected changes
   useEffect(() => {
@@ -64,15 +91,26 @@ function MintNft() {
           if (accounts && accounts.length > 0) {
             const network = await window.ethereum.request({ method: 'eth_chainId' });
             console.log("Current chain ID:", network);
-            // Localhost is usually 31337 (0x7a69) or 1337 (0x539)
-            const isLocalhost = network === '0x7a69' || network === '0x539';
-            const isGoerli = network === '0x5';
-            setCorrectNetwork(isLocalhost || isGoerli);
             
-            if (!isLocalhost && !isGoerli) {
-              setNetworkError("Please connect to Localhost or Goerli network to use this app");
-            } else {
+            // Define network IDs (in hex format as returned by MetaMask)
+            const NETWORKS = {
+              LOCALHOST: ['0x7a69', '0x539'], // 31337 or 1337
+              GOERLI: '0x5',                 // 5
+              SEPOLIA: '0xaa36a7',           // 11155111
+              AMOY: '0x13882'                // 80002
+            };
+            
+            if (isSepolia) {
+              setCorrectNetwork(true);
               setNetworkError(null);
+            } else {
+              setCorrectNetwork(false);
+              setNetworkError("Please connect to Sepolia network to use this app");
+            }
+            
+            // If we're not on Sepolia, suggest switching to it
+            if (!isSepolia) {
+              console.log("Not on Sepolia network, suggesting switch");
             }
           }
         } catch (error) {
@@ -93,36 +131,31 @@ function MintNft() {
   const [transaction, setTransaction] = useState(null);
 
   const handleMint = async () => {
-    if (!contract || !isConnected) return;
+    if (!signer || !isConnected) return;
     
     setIsMinting(true);
     
     try {
-      // In a real app, you would upload metadata to IPFS
-      // For demo purposes, we're using a fake IPFS URI
-      const tokenURI = `ipfs://QmSampleHash${selectedNft}`;
+      // Get the selected NFT metadata
+      const selectedMetadata = SAMPLE_NFTS[selectedNft];
       
-      console.log('Attempting to mint NFT with URI:', tokenURI);
-      console.log('Contract instance:', contract);
+      console.log('Attempting to mint NFT with metadata:', selectedMetadata);
       
-      // Call mint function with proper error handling
-      const tx = await mintNFT(contract, tokenURI);
-      console.log('Transaction initiated:', tx);
+      // Call our new mintNFT function from mintUtils.js
+      const result = await mintNFT(signer, selectedMetadata);
+      console.log('Mint result:', result);
       
-      setTransaction(tx.hash);
+      setTransaction(result.transactionHash);
       
       // Show toast notification
-      toast.loading("Minting your NFT...", { id: tx.hash });
-      
-      // Wait for transaction to be mined
-      const receipt = await tx.wait();
-      console.log('Transaction receipt:', receipt);
-      
-      // Update toast notification
-      toast.success("NFT minted successfully!", { id: tx.hash });
+      toast.success("NFT minted successfully!", { 
+        id: result.transactionHash,
+        duration: 5000
+      });
       
       // Refresh contract data
       refreshContractData();
+      
     } catch (error) {
       console.error("Mint error:", error);
       
@@ -131,8 +164,11 @@ function MintNft() {
         toast.error("Transaction rejected by user");
       } else if (error.message && error.message.includes('insufficient funds')) {
         toast.error("Insufficient funds to complete transaction");
-      } else if (error.message && error.message.includes('user rejected transaction')) {
+      } else if (error.message && error.message.includes('user rejected')) {
         toast.error("Transaction rejected by user");
+      } else if (error.message && error.message.includes('chain ID')) {
+        toast.error("Please switch to Sepolia network");
+        setNetworkError("This application requires the Sepolia network (Chain ID: 11155111)");
       } else {
         toast.error(`Failed to mint NFT: ${error.message || 'Unknown error'}`);
       }
@@ -170,32 +206,68 @@ function MintNft() {
     );
   }
   
-  // Wrong network error
+  // Network message or error
   if (networkError) {
+    // Determine if it's a warning or error
+    const isWarning = networkError.includes("supported network");
+    
     return (
       <div>
-        <Alert variant="danger" className="d-flex align-items-center">
+        <Alert variant={isWarning ? "warning" : "danger"} className="d-flex align-items-center">
           <AlertTriangle size={20} className="me-2" />
           {networkError}
         </Alert>
-        <Button 
-          variant="primary" 
-          className="w-100 mt-3"
-          disabled={loading}
-          onClick={switchToLocalhostNetwork}
-        >
-          {loading ? (
-            <>
-              <Spinner size="sm" animation="border" className="me-2" />
-              Switching...
-            </>
-          ) : (
-            <>
-              <RefreshCw size={18} className="me-2" />
-              Switch to Localhost Network
-            </>
+        <div className="d-grid gap-2 mt-3">
+          <Button 
+            variant="primary" 
+            disabled={loading}
+            onClick={handleSwitchToSepolia}
+          >
+            {loading ? (
+              <>
+                <Spinner size="sm" animation="border" className="me-2" />
+                Switching...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={18} className="me-2" />
+                Switch to Sepolia Network
+              </>
+            )}
+          </Button>
+          
+          {/* Only show these options if we're showing a warning, not an error */}
+          {isWarning && (
+            <Button 
+              variant="outline-secondary" 
+              className="mt-2"
+              onClick={() => {
+                // Clear the network error and continue with current network
+                setNetworkError(null);
+              }}
+            >
+              Continue with Current Network
+            </Button>
           )}
-        </Button>
+          
+          <Button 
+            variant="outline-secondary" 
+            className="mt-2"
+            disabled={loading}
+            onClick={() => switchToNetwork(11155111)} // Sepolia
+          >
+            Switch to Sepolia Network
+          </Button>
+          
+          <Button 
+            variant="outline-secondary" 
+            className="mt-2"
+            disabled={loading}
+            onClick={switchToLocalhostNetwork}
+          >
+            Switch to Localhost Network
+          </Button>
+        </div>
       </div>
     );
   }
@@ -206,26 +278,63 @@ function MintNft() {
       <div>
         <Alert variant="danger" className="d-flex align-items-center">
           <AlertTriangle size={20} className="me-2" />
-          Contract not found on this network. Please make sure your local blockchain is running or switch to Goerli testnet.
-        </Alert>
-        <Button 
-          variant="primary" 
-          className="w-100 mt-3"
-          disabled={loading}
-          onClick={switchToLocalhostNetwork}
-        >
-          {loading ? (
+          {contractError ? (
             <>
-              <Spinner size="sm" animation="border" className="me-2" />
-              Switching...
+              <strong>Contract Error:</strong> {contractError}
+              <div className="small mt-2">
+                This may be due to network issues or the contract not being deployed on this network.
+              </div>
             </>
           ) : (
-            <>
-              <RefreshCw size={18} className="me-2" />
-              Switch to Localhost Network
-            </>
+            <>Contract not found on this network. Please make sure your local blockchain is running or switch to a supported testnet.</>
           )}
-        </Button>
+        </Alert>
+        
+        <div className="d-grid gap-2 mt-3">
+          <Button 
+            variant="primary" 
+            disabled={loading}
+            onClick={() => switchToNetwork(11155111)} // Sepolia
+          >
+            {loading ? (
+              <>
+                <Spinner size="sm" animation="border" className="me-2" />
+                Switching...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={18} className="me-2" />
+                Switch to Sepolia Network
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            variant="outline-secondary" 
+            className="mt-2"
+            disabled={loading}
+            onClick={switchToAmoyNetwork}
+          >
+            Switch to Polygon Amoy Network
+          </Button>
+          
+          <Button 
+            variant="outline-secondary" 
+            className="mt-2"
+            disabled={loading}
+            onClick={switchToLocalhostNetwork}
+          >
+            Switch to Localhost Network
+          </Button>
+          
+          <Button 
+            variant="outline-info" 
+            className="mt-3"
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
+        </div>
       </div>
     );
   }

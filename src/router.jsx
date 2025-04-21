@@ -3,23 +3,17 @@ import {
   createRoutesFromElements,
   Route
 } from 'react-router-dom';
-import Home from './pages/Home';
-import Gallery from './pages/Gallery';
-import Layout from './components/Layout';
+import HomeNew from './pages/HomeNew';
 
-// Create routes configuration
+// Create simplified routes configuration with just the HomeNew component
 const routes = createRoutesFromElements(
-  <Route element={<Layout />}>
-    <Route index element={<Home />} />
-    <Route path="gallery" element={<Gallery />} />
-  </Route>
+  <Route path="/" element={<HomeNew />} />
 );
 
 // Configure router with future flags to eliminate warnings
 const router = createBrowserRouter(routes, {
   future: {
-    v7_startTransition: true,
-    v7_relativeSplatPath: true
+    v7_startTransition: true
   }
 });
 

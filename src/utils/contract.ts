@@ -4,28 +4,21 @@ import type { CryptoCanvas } from "../types/contracts";
 import contractAbi from "../../artifacts/contracts/CryptoCanvas.sol/CryptoCanvas.json";
 
 // Import ABI and contract addresses
+// Hardcoded Sepolia deployment data
+const SEPOLIA_CHAIN_ID = 11155111;
+const SEPOLIA_CONTRACT_ADDRESS = "0xd9145CCE52D386f254917e481eB44e9943F39138";
+
 export const getNetworkConfig = async () => {
-  // Get network from the connected provider
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  return provider.getNetwork()
-    .then(async network => {
-      try {
-        // Try to load deployment info for the current network
-        const networkName = network.name !== 'unknown' ? network.name : 'localhost';
-        
-        // Use dynamic import instead of require
-        const deploymentInfo = await import(`../deployments/${networkName}.json`);
-        
-        return { 
-          contractAddress: deploymentInfo.default.contractAddress,
-          contractAbi: contractAbi.abi,
-          chainId: network.chainId
-        };
-      } catch (error) {
-        console.error("Failed to load contract deployment info:", error);
-        throw new Error("Contract not deployed to this network");
-      }
-    });
+  const network = await provider.getNetwork();
+  if (network.chainId !== SEPOLIA_CHAIN_ID) {
+    throw new Error("Contract not deployed to this network. Please switch your wallet to Sepolia (11155111). ");
+  }
+  return {
+    contractAddress: SEPOLIA_CONTRACT_ADDRESS,
+    contractAbi: contractAbi.abi,
+    chainId: SEPOLIA_CHAIN_ID
+  };
 };
 
 export const getContract = async (

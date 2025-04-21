@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ImageIcon, Loader } from 'lucide-react';
 import useWallet from '../hooks/useWallet';
 import useContract from '../hooks/useContract';
-import { getOwnedTokens } from '../utils/contract';
+import { getOwnedTokens } from '../utils/sepoliaContract';
 
 interface TokenData {
   id: number;

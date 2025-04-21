@@ -39,7 +39,7 @@ const SAMPLE_NFTS = [
   }
 ];
 
-function Home() {
+function HomeNew() {
   // State variables
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState('');
@@ -70,14 +70,13 @@ function Home() {
 
           // Setup event listeners
           window.ethereum.on('accountsChanged', (accounts) => {
-            if (accounts.length === 0) {
-              // User disconnected
-              setIsConnected(false);
-              setAddress('');
-              setSigner(null);
+            const isSepolia = chainId === SEPOLIA_CHAIN_ID;
+            if (isSepolia) {
+              setCorrectNetwork(true);
+              setNetworkError(null);
             } else {
-              // Account changed
-              connectWallet(false);
+              setCorrectNetwork(false);
+              setNetworkError("Please connect to Sepolia network to use this app");
             }
           });
 
@@ -139,6 +138,7 @@ function Home() {
         setNetworkError("Please switch to Sepolia network to use this application");
       } else {
         setNetworkError(null);
+        setCorrectNetwork(true);
         // Initialize contract
         initializeContract(ethersSigner);
       }
@@ -238,7 +238,7 @@ function Home() {
 
   // Mint NFT function
   const handleMint = async () => {
-    if (!signer || !contract || !isConnected) return;
+    if (!signer || !contract || !isConnected || !correctNetwork) return;
     
     setIsMinting(true);
     
@@ -309,7 +309,7 @@ function Home() {
       {networkError && (
         <Row className="mb-4">
           <Col>
-            <Alert variant="warning" className="d-flex align-items-center">
+            <Alert variant="danger" className="d-flex align-items-center">
               <div className="me-3">⚠️</div>
               <div>
                 <strong>{networkError}</strong>
@@ -331,79 +331,120 @@ function Home() {
                   </Button>
                 </div>
               </div>
-            </Col>
-          </Row>
-        </Container>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-5 bg-light">
-        <Container>
-          <h2 className="text-center mb-5 fw-bold">Why CryptoCanvas?</h2>
-          
-          <Row className="g-4">
-            <Col md={4}>
-              <Card className="h-100 shadow-sm hover-shadow">
-                <Card.Body className="p-4">
-                  <div className="bg-primary bg-opacity-10 text-primary rounded p-3 d-inline-flex mb-3">
-                    <FileCode2 size={24} />
+            </Alert>
+          </Col>
+        </Row>
+      )}
+      
+      <Row className="mb-4">
+        {/* Wallet Connect Section */}
+        <Col md={6} className="mb-4 mb-md-0">
+          <Card>
+            <Card.Header as="h2">Wallet Connection</Card.Header>
+            <Card.Body>
+              {!isConnected ? (
+                <div className="text-center">
+                  <p>Connect your wallet to mint NFTs</p>
+                  <Button 
+                    variant="primary" 
+                    onClick={() => connectWallet(true)}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner size="sm" animation="border" className="me-2" />
+                        Connecting...
+                      </>
+                    ) : (
+                      "Connect Wallet"
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="bg-success rounded-circle me-2" style={{ width: '10px', height: '10px' }}></div>
+                    <span><strong>Connected</strong></span>
                   </div>
-                  <h3 className="h5 fw-bold mb-2">ERC-721 Standard</h3>
-                  <p className="text-muted">
-                    Built on the Ethereum blockchain using the ERC-721 standard for maximum compatibility with marketplaces and wallets.
-                  </p>
-                </Card.Body>
-              </Card>
-            </Col>
-            
-            <Col md={4}>
-              <Card className="h-100 shadow-sm hover-shadow">
-                <Card.Body className="p-4">
-                  <div className="bg-primary bg-opacity-10 text-primary rounded p-3 d-inline-flex mb-3">
-                    <Shield size={24} />
+                  <p className="mb-1"><strong>Address:</strong></p>
+                  <p className="text-break mb-3">{address}</p>
+                  <p className="mb-1"><strong>Network:</strong></p>
+                  <p>{chainId === SEPOLIA_CHAIN_ID ? "Sepolia Test Network" : `Chain ID: ${chainId}`}</p>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        {/* Mint NFT Section */}
+        <Col md={6}>
+          <Card>
+            <Card.Header as="h2">Mint NFT</Card.Header>
+            <Card.Body>
+              {!isConnected ? (
+                <Alert variant="warning">Please connect your wallet to mint NFTs</Alert>
+              ) : networkError ? (
+                <Alert variant="warning">Please switch to Sepolia network to mint NFTs</Alert>
+              ) : (
+                <div>
+                  <div className="mb-3">
+                    <p><strong>Contract Info:</strong></p>
+                    <p className="mb-1">Mint Price: {mintPrice} ETH</p>
+                    <p className="mb-1">Current Supply: {currentSupply} / {maxSupply}</p>
                   </div>
-                  <h3 className="h5 fw-bold mb-2">Secure Ownership</h3>
-                  <p className="text-muted">
-                    Your NFT ownership is secured by the Ethereum blockchain, providing immutable proof of authenticity and provenance.
-                  </p>
-                </Card.Body>
-              </Card>
-            </Col>
-            
-            <Col md={4}>
-              <Card className="h-100 shadow-sm hover-shadow">
-                <Card.Body className="p-4">
-                  <div className="bg-primary bg-opacity-10 text-primary rounded p-3 d-inline-flex mb-3">
-                    <CreditCard size={24} />
+                  
+                  <div className="mb-3">
+                    <p><strong>Select NFT Design:</strong></p>
+                    <Row>
+                      {SAMPLE_NFTS.map((nft, index) => (
+                        <Col key={index} xs={12} md={4} className="mb-3">
+                          <Card 
+                            onClick={() => setSelectedNft(index)}
+                            className={`h-100 ${selectedNft === index ? 'border-primary' : ''}`}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <Card.Img variant="top" src={nft.image} style={{ height: '100px', objectFit: 'cover' }} />
+                            <Card.Body className="p-2">
+                              <Card.Title className="fs-6">{nft.name}</Card.Title>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
                   </div>
-                  <h3 className="h5 fw-bold mb-2">Easy Transactions</h3>
-                  <p className="text-muted">
-                    Buy, sell, and trade your NFTs with ease using MetaMask or any other Ethereum-compatible wallet.
+                  
+                  <Button
+                    variant="primary"
+                    className="w-100"
+                    onClick={handleMint}
+                    disabled={isMinting}
+                  >
+                    {isMinting ? (
+                      <>
+                        <Spinner size="sm" animation="border" className="me-2" />
+                        Minting...
+                      </>
+                    ) : (
+                      "Mint NFT"
+                    )}
+                  </Button>
+                </div>
+              )}
+              
+              {transaction && (
+                <Alert variant="success" className="mt-3">
+                  <p className="mb-1"><strong>NFT Minted Successfully!</strong></p>
+                  <p className="mb-0 small">
+                    Transaction Hash: <code className="text-break">{transaction}</code>
                   </p>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-      </section>
-
-      {/* Mint Section */}
-      <section id="mint" className="py-5">
-        <Container>
-          <Row className="justify-content-center">
-            <Col md={8} lg={6}>
-              <Card className="shadow border-0">
-                <Card.Body className="p-4">
-                  <h2 className="text-center mb-4 fw-bold">Mint Your NFT</h2>
-                  <MintNft />
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-      </section>
-    </div>
+                </Alert>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 
-export default Home;
+export default HomeNew;

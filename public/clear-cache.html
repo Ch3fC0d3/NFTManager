@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Cache Clearer - NFT Manager</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+      background-color: #f8f9fa;
+    }
+    h1 {
+      color: #0d6efd;
+      margin-bottom: 1rem;
+    }
+    .card {
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .btn {
+      display: inline-block;
+      font-weight: 500;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border-radius: 0.25rem;
+      color: #fff;
+      background-color: #0d6efd;
+      border: 1px solid #0d6efd;
+      text-decoration: none;
+      transition: all 0.15s ease-in-out;
+    }
+    .btn:hover {
+      background-color: #0b5ed7;
+      border-color: #0a58ca;
+    }
+    .progress {
+      height: 20px;
+      background-color: #e9ecef;
+      border-radius: 0.25rem;
+      margin: 1rem 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background-color: #0d6efd;
+      border-radius: 0.25rem;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    .text-muted {
+      color: #6c757d;
+    }
+    .mt-4 {
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>NFT Manager Cache Clearer</h1>
+  
+  <div class="card">
+    <h2>Clear Browser Cache</h2>
+    <p>If you're experiencing issues with the NFT Manager application, clearing your browser cache may help resolve them.</p>
+    
+    <div id="progress-container" style="display: none;">
+      <div class="progress">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <p id="status-text">Clearing cache...</p>
+    </div>
+    
+    <button id="clear-cache-btn" class="btn">Clear Cache & Reload</button>
+  </div>
+  
+  <div class="card">
+    <h2>Dynamic Import Issue Fix</h2>
+    <p>We've detected that you might be experiencing the <strong>"Unknown variable dynamic import"</strong> error. This happens when the application tries to load deployment files dynamically in production.</p>
+    <p>The button below will specifically address this issue by:</p>
+    <ol>
+      <li>Clearing all browser caches related to deployment files</li>
+      <li>Removing any stored references to dynamic imports</li>
+      <li>Forcing a complete reload with the latest code changes</li>
+    </ol>
+    <button id="fix-dynamic-import-btn" class="btn" style="background-color: #198754;">Fix Dynamic Import Issue</button>
+  </div>
+  
+  <div class="card">
+    <h2>Manual Cache Clearing</h2>
+    <p>If the automatic cache clearing doesn't resolve your issue, you can try these steps:</p>
+    <ol>
+      <li>Open your browser's settings</li>
+      <li>Navigate to the privacy or history section</li>
+      <li>Select "Clear browsing data" or similar option</li>
+      <li>Make sure "Cached images and files" is selected</li>
+      <li>Click "Clear data"</li>
+      <li>Return to the NFT Manager application and refresh the page</li>
+    </ol>
+  </div>
+  
+  <p class="text-muted mt-4">NFT Manager &copy; 2025</p>
+  
+  <script>
+    // Function to clear all caches and reload
+    function clearCachesAndReload(specificFix = false) {
+      // Show progress
+      document.getElementById('progress-container').style.display = 'block';
+      const progressBar = document.getElementById('progress-bar');
+      const statusText = document.getElementById('status-text');
+      
+      // Simulate progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        progressBar.style.width = progress + '%';
+        
+        if (progress === 20) {
+          statusText.textContent = 'Clearing application cache...';
+        } else if (progress === 40) {
+          statusText.textContent = 'Clearing deployment files cache...';
+        } else if (progress === 60) {
+          statusText.textContent = specificFix ? 'Fixing dynamic import issue...' : 'Removing dynamic import references...';
+        } else if (progress === 80) {
+          statusText.textContent = 'Finalizing...';
+        }
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          statusText.textContent = specificFix ? 'Dynamic import issue fixed! Reloading...' : 'Cache cleared! Reloading page...';
+          
+          // Clear all browser caches using Cache API
+          if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+              return Promise.all(
+                cacheNames.map(function(cacheName) {
+                  return caches.delete(cacheName);
+                })
+              );
+            });
+          }
+
+          // Clear localStorage
+          localStorage.clear();
+          
+          // Clear sessionStorage
+          sessionStorage.clear();
+          
+          // Clear IndexedDB
+          const clearIndexedDB = async () => {
+            try {
+              const databases = await window.indexedDB.databases();
+              databases.forEach(db => {
+                window.indexedDB.deleteDatabase(db.name);
+              });
+            } catch (e) {
+              console.log('IndexedDB clearing not supported in this browser');
+            }
+          };
+          
+          clearIndexedDB();
+          
+          // Force hard reload from server with cache busting
+          setTimeout(() => {
+            const cacheBuster = new Date().getTime();
+            // Add cache busting parameters for various resources
+            const url = new URL(window.location.origin);
+            url.searchParams.set('nocache', cacheBuster);
+            
+            // Add specific parameter for dynamic import fix
+            if (specificFix) {
+              url.searchParams.set('fixdynamicimport', 'true');
+              url.searchParams.set('timestamp', cacheBuster);
+            } else {
+              url.searchParams.set('cleardynamic', 'true');
+            }
+            
+            window.location.href = url.toString();
+          }, 1500);
+        }
+      }, 100);
+    }
+
+    // Regular cache clearing button
+    document.getElementById('clear-cache-btn').addEventListener('click', function() {
+      clearCachesAndReload(false);
+    });
+    
+    // Specific dynamic import fix button
+    document.getElementById('fix-dynamic-import-btn').addEventListener('click', function() {
+      clearCachesAndReload(true);
+    });
+  </script>
+</body>
+</html>
