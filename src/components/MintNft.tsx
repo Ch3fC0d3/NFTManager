@@ -3,7 +3,7 @@ import { PlusCircle, Sparkles, Check, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useWallet from '../hooks/useWallet';
 import useContract from '../hooks/useContract';
-import { mintNFT } from '../utils/sepoliaContract';
+import { mintNFT } from '../utils/contractUtils';
 
 // Sample NFT metadata options
 const SAMPLE_NFTS = [

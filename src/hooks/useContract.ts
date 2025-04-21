@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { getContract, getMintPrice, getCurrentSupply, getMaxSupply } from "../utils/sepoliaContract";
+import { getContract, getMintPrice, getCurrentSupply, getMaxSupply } from "../utils/contractUtils";
 import type { CryptoCanvas } from "../types/contracts";
 
 interface ContractState {

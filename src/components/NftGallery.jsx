@@ -3,7 +3,7 @@ import { ImageIcon, Loader } from 'lucide-react';
 import { Row, Col, Card, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import useWallet from '../hooks/useWallet.js';
 import useContract from '../hooks/useContract.js';
-import { getOwnedTokens } from '../utils/sepoliaContract.js';
+import { getOwnedTokens } from '../utils/contractUtils.js';
 
 function NftGallery() {
   const { isConnected, address, signer, provider } = useWallet();
