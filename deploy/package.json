@@ -2,9 +2,15 @@
   "name": "nftman-frontend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "build": "next build"
+    "heroku-postbuild": "npm install --production=false && npm run build"
   },
   "dependencies": {
     "next": "14.2.3",
@@ -16,6 +22,13 @@
     "@chakra-ui/react": "2.8.2",
     "@emotion/react": "11.11.4",
     "@emotion/styled": "11.11.0",
-    "framer-motion": "11.0.17"
+    "framer-motion": "11.0.17",
+    "crypto-browserify": "3.12.0",
+    "stream-browserify": "3.0.0",
+    "stream-http": "3.2.0",
+    "https-browserify": "1.0.0",
+    "browserify-zlib": "0.2.0",
+    "path-browserify": "1.0.1",
+    "os-browserify": "0.3.0"
   }
 }
